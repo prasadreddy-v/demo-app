@@ -62,6 +62,10 @@ jobs:
     - name: Install Helm
       uses: azure/setup-helm@v4
 
+    - name: Verify AWS Identity
+      run: |
+        aws sts get-caller-identity  
+
     - name: Configure kubeconfig
       run: |
         aws eks update-kubeconfig \
