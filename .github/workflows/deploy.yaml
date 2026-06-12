@@ -1,4 +1,4 @@
-name: Build and Deploy
+name: Build Push Deploy
 
 on:
   push:
@@ -11,13 +11,14 @@ env:
   CLUSTER_NAME: devops-eks
 
 jobs:
+
   deploy:
 
     runs-on: ubuntu-latest
 
     steps:
 
-    - name: Checkout
+    - name: Checkout Code
       uses: actions/checkout@v4
 
     - name: Configure AWS Credentials
@@ -27,11 +28,11 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
-    - name: Login to Amazon ECR
+    - name: Login To ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
 
-    - name: Build Docker Image
+    - name: Build Image
       run: |
         docker build -t demo-app:${{ github.sha }} .
 
@@ -45,16 +46,33 @@ jobs:
         docker push \
         ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-south-1.amazonaws.com/demo-app:${{ github.sha }}
 
-    - name: Update kubeconfig
+    - name: Install Trivy
+      run: |
+        sudo apt-get update
+        sudo apt-get install wget -y
+        wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.64.1_Linux-64bit.deb
+        sudo dpkg -i trivy_0.64.1_Linux-64bit.deb
+
+    - name: Scan Image
+      run: |
+        trivy image \
+        --severity HIGH,CRITICAL \
+        ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-south-1.amazonaws.com/demo-app:${{ github.sha }}
+
+    - name: Install Helm
+      uses: azure/setup-helm@v4
+
+    - name: Configure kubeconfig
       run: |
         aws eks update-kubeconfig \
         --region ap-south-1 \
         --name devops-eks
 
-    - name: Deploy New Version
+    - name: Helm Upgrade
       run: |
-        kubectl set image deployment/demo-app \
-        demo-app=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-south-1.amazonaws.com/demo-app:${{ github.sha }}
+        helm upgrade --install demo-app ./demo-app \
+        --set image.repository=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-south-1.amazonaws.com/demo-app \
+        --set image.tag=${{ github.sha }}
 
     - name: Verify Rollout
       run: |
