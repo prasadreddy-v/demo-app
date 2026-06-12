@@ -46,26 +46,18 @@ jobs:
         docker push \
         ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-south-1.amazonaws.com/demo-app:${{ github.sha }}
 
-    # - name: Install Trivy
-    #   run: |
-    #     sudo apt-get update
-    #     sudo apt-get install wget -y
-    #     wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.64.1_Linux-64bit.deb
-    #     sudo dpkg -i trivy_0.64.1_Linux-64bit.deb
+    - name: Install Trivy
+      run: |
+        sudo apt-get update
+        sudo apt-get install wget -y
+        wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.64.1_Linux-64bit.deb
+        sudo dpkg -i trivy_0.64.1_Linux-64bit.deb
 
-    # - name: Scan Image
-    #   run: |
-    #     trivy image \
-    #     --severity HIGH,CRITICAL \
-    #     ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-south-1.amazonaws.com/demo-app:${{ github.sha }}
-
-    - name: Run Trivy Scan
-      uses: aquasecurity/trivy-action@0.33.1
-      with:
-        image-ref: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-south-1.amazonaws.com/demo-app:${{ github.sha }}
-        format: table
-        exit-code: 0
-        severity: HIGH,CRITICAL 
+    - name: Scan Image
+      run: |
+        trivy image \
+        --severity HIGH,CRITICAL \
+        ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-south-1.amazonaws.com/demo-app:${{ github.sha }}
 
     - name: Install Helm
       uses: azure/setup-helm@v4
